@@ -1,38 +1,48 @@
-# Flutter 3.35.7 공식 Podfile (2025년 11월 기준)
-
+# Uncomment this line to define a global platform for your project
 platform :ios, '13.0'
 
 # CocoaPods analytics sends network requests synchronously. Disable it.
 install! 'cocoapods', :disable_input_output_paths => true
 
-# Flutter가 제공하는 플러그인 설치 함수 (이게 핵심!)
-def flutter_install_all_ios_pods(file)
-  # Flutter가 자동으로 생성하는 코드
-  pod 'Flutter', :path => File.dirname(file)
-  pod 'flutter_plugin_android_lifecycle', :path => File.dirname(file) + '/.symlinks/plugins/flutter_plugin_android_lifecycle/ios'
-  # 나머지 플러그인들은 자동으로 추가됨
+def flutter_root
+  generated_xcode_build_settings_path = File.expand_path(File.join('..', 'Flutter', 'Generated.xcconfig'), __FILE__)
+  unless File.exist?(generated_xcode_build_settings_path)
+    raise "#{generated_xcode_build_settings_path} must exist. If you're running pod install manually, make sure \"flutter pub get\" is executed first"
+  end
+
+  File.foreach(generated_xcode_build_settings_path) do |line|
+    matches = line.match /FLUTTER_ROOT\=(.*)/
+    return matches[1].strip if matches
+  end
+  raise "FLUTTER_ROOT not found in #{generated_xcode_build_settings_path}. Try deleting Generated.xcconfig, then run flutter pub get"
 end
+
+require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelper'), flutter_root)
+
+flutter_ios_podfile_setup
 
 target 'Runner' do
   use_frameworks!
   use_modular_headers!
 
-  # Flutter 플러그인 자동 설치
-  flutter_install_all_ios_pods(__FILE__)
+  flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
+  target 'RunnerTests' do
+    inherit! :search_paths
+  end
 end
 
 post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
 
-    # MLKitXenoCommon 버전 충돌 강제 해결 (이게 핵심!)
+    # MLKitXenoCommon 버전 충돌 해결 (핵심!)
     if target.name.include? 'MLKitXenoCommon'
       target.build_configurations.each do |config|
         config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.0'
       end
     end
 
-    # 모든 타겟 iOS 13.0 이상
+    # 모든 타겟 iOS 13.0 이상 설정
     target.build_configurations.each do |config|
       config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.0'
     end
